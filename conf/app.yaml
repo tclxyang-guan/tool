@@ -1,0 +1,19 @@
+prefixurl: 0.0.0.0:8080
+runmode: debug
+logsavepath: logs/
+logsavename: log
+logfileext: log
+timeformat: 20060102
+apikey: b2aafa46590b202ec96502b17b58fc3a1263262643
+apitoken: 2958e5b2b2346dbb3efd64e19867455a1555578227
+showdocurl: https://www.showdoc.cc/server/api/item/updateByApi
+showdocopen: true
+mysql:
+    address:
+    dbname:
+    username:
+    password:
+    maxconns:
+    maxidleconns:
+    connmaxlifetime:
+
