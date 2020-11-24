@@ -43,11 +43,11 @@ var ShowDocMap = map[string]ShowDocData{
 }
 
 type ShowDocData struct {
-	Req       interface{}
-	Resp      *Rsp
-	CatName   string //文件夹
-	PageTitle string //标题
-	SNumber   int    //排序
+	Req       interface{} //请求参数
+	Resp      *Rsp        //返回参数
+	CatName   string      //文件夹
+	PageTitle string      //标题
+	SNumber   int         //排序
 }
 type UploadShowDocParam struct {
 	ApiKey      string `json:"api_key"`

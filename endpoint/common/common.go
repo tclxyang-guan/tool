@@ -14,7 +14,6 @@ import (
 	"github.com/spf13/cast"
 	"net/http"
 	"reflect"
-	"strconv"
 	"strings"
 	"transfDoc/conf"
 	"transfDoc/pkg/logging"
@@ -73,6 +72,8 @@ func (r Rsp) ReplyTokenError(c *gin.Context) {
 	c.JSON(http.StatusOK, r)
 }
 
+//若配置未打开或者请求头中未传key或者ShowDocMap中未包含请求头中的key都不会生成文档
+//也可根据url来配置ShowDocMap
 func (r Rsp) DeferShowDoc(c *gin.Context) {
 	if !conf.GetConfig().ShowDocOpen {
 		return
@@ -81,8 +82,12 @@ func (r Rsp) DeferShowDoc(c *gin.Context) {
 	if key == "" {
 		return
 	}
+	data, ok := ShowDocMap[key]
+	if !ok {
+		return
+	}
 	method := c.Request.Method
-	data := ShowDocMap[key]
+
 	usdp := UploadShowDocParam{}
 	usdp.ApiKey = conf.GetConfig().ApiKey
 	usdp.ApiToken = conf.GetConfig().ApiToken
@@ -148,34 +153,6 @@ func (r Rsp) DeferShowDoc(c *gin.Context) {
 	if cast.ToInt(m["error_code"]) != 0 {
 		fmt.Println(m["error_message"])
 	}
-}
-
-type Session struct {
-	UserId        string // 用户id
-	UserName      string // 用户名
-	CommunityId   string // 社区id
-	CommunityName string // 社区名
-	NeighborId    string // 小区id
-	NeighborName  string // 小区名
-	UserType      int    // 用户类型  1，社区管理员 2，社区住户
-}
-
-// 获取用户基本信息
-func GetSession(c *gin.Context) *Session {
-	s := &Session{}
-	s.UserId = c.GetHeader("uid")
-	s.UserName = c.GetHeader("uname")
-	s.CommunityId = c.GetString("cid")
-	s.CommunityName = c.GetHeader("cname")
-	s.NeighborId = c.GetHeader("nid")
-	s.NeighborName = c.GetHeader("nname")
-	s.UserType, _ = strconv.Atoi(c.GetHeader("utype"))
-	return s
-}
-
-// 获取用户id
-func GetUserID(c *gin.Context) string {
-	return c.GetHeader("uid")
 }
 
 var Validate *validator.Validate
