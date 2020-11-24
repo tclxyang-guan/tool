@@ -7,7 +7,7 @@ golang集成showdoc 调取接口自动生成在线文档
 
 若私有showdoc  showdocurl: http://xx.com/server/index.php?s=/api/item/updateByApi
 
-2、在路由层添加前置拦截获取请求体
+2、在路由层添加前置拦截获取请求体(一定记得发布线上注释掉)
 
 r.Use(middleware.RequestParam())
 
