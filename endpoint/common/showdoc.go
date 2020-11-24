@@ -11,6 +11,8 @@ import (
 	"transfDoc/models"
 )
 
+//Req "|字段一|是|int|说明一|\r\n|字段二|是|int|说明二|\r\n"  可直接传入字符串也可为结构体指针
+//Rsp "|字段一|int|说明一|\r\n|字段二|int|说明二|\r\n" 可直接传入字符串也可为结构体指针
 var ShowDocMap = map[string]ShowDocData{
 	"BuildCreate": {
 		&models.Build{},
@@ -96,11 +98,14 @@ func reqRecursive(str string, typ reflect.Type) string {
 //生成请求的表
 func DatamapGenerateReq(model interface{}) string {
 	if model == nil {
-		return "无(若有请求示例，按示例走)"
+		return "无"
 	}
-	elem := reflect.TypeOf(model).Elem()
 	str := "|参数名|必选|类型|说明|\r\n"
 	str += "|:----    |:---|:----- |-----   |\r\n"
+	if value, ok := model.(string); ok {
+		return str + value
+	}
+	elem := reflect.TypeOf(model).Elem()
 
 	return reqRecursive(str, elem)
 }
@@ -110,10 +115,13 @@ func DatamapGenerateResp(model interface{}) string {
 	if model == nil {
 		return "无"
 	}
-	elem := reflect.TypeOf(model).Elem()
+
 	str := "|参数名|类型|说明|\r\n"
 	str += "|:----    |:----- |-----   |\r\n"
-
+	if value, ok := model.(string); ok {
+		return str + value
+	}
+	elem := reflect.TypeOf(model).Elem()
 	return respRecursive(str, elem)
 }
 func respRecursive(str string, elem reflect.Type) string {
