@@ -60,29 +60,32 @@ type UploadShowDocParam struct {
 	SNumber     int    `json:"s_number"`     //排序
 }
 
-func reqRecursive(str string, typ reflect.Type) string {
-	if !strings.Contains(typ.String(), ".") {
+func reqRecursive(str string, elem reflect.Type) string {
+	if !strings.Contains(elem.String(), ".") {
 		return ""
 	}
-	for j := 0; j < typ.NumField(); j++ {
-		isNeed := typ.Field(j).Tag.Get("req")
+	if strings.HasPrefix(elem.String(), "*") || strings.Contains(elem.String(), "[]") { //如果是指针无法转义或者切片
+		return ""
+	}
+	for j := 0; j < elem.NumField(); j++ {
+		isNeed := elem.Field(j).Tag.Get("req")
 		if isNeed == "-" {
 			continue
 		}
-		if strings.Contains(typ.Field(j).Type.String(), ".") {
-			str += reqRecursive("", typ.Field(j).Type)
+		if strings.Contains(elem.Field(j).Type.String(), ".") {
+			str += reqRecursive("", elem.Field(j).Type)
 			continue
 		}
-		validate := typ.Field(j).Tag.Get("validate")
+		validate := elem.Field(j).Tag.Get("validate")
 		require := "否"
 		if strings.Contains(validate, "require") {
 			require = "是"
 		}
-		gorm := typ.Field(j).Tag.Get("gorm")
+		gorm := elem.Field(j).Tag.Get("gorm")
 		comment := ""
 		gormList := strings.Split(gorm, ";")
 		for _, v := range gormList {
-			comment = typ.Field(j).Tag.Get("comment")
+			comment = elem.Field(j).Tag.Get("comment")
 			if comment == "" && strings.Contains(v, "comment") {
 				comment = strings.Replace(strings.Split(v, ":")[1], "'", "", -1)
 			}
@@ -90,7 +93,7 @@ func reqRecursive(str string, typ reflect.Type) string {
 		if comment == "" {
 			comment = "暂无,若需要联系开发者"
 		}
-		str += "|" + strings.ReplaceAll(typ.Field(j).Tag.Get("json"), ",omitempty", "") + "|" + require + "|" + typ.Field(j).Type.String() + "|" + comment + "|\r\n"
+		str += "|" + strings.ReplaceAll(elem.Field(j).Tag.Get("json"), ",omitempty", "") + "|" + require + "|" + elem.Field(j).Type.String() + "|" + comment + "|\r\n"
 	}
 	return str
 }
@@ -126,6 +129,9 @@ func DatamapGenerateResp(model interface{}) string {
 }
 func respRecursive(str string, elem reflect.Type) string {
 	if !strings.Contains(elem.String(), ".") {
+		return ""
+	}
+	if strings.HasPrefix(elem.String(), "*") || strings.Contains(elem.String(), "[]") { //如果是指针无法转义或者切片
 		return ""
 	}
 	for i := 0; i < elem.NumField(); i++ {
