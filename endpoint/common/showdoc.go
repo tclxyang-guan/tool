@@ -6,6 +6,7 @@
 package common
 
 import (
+	"container/list"
 	"reflect"
 	"strings"
 	"transfDoc/models"
@@ -60,20 +61,40 @@ type UploadShowDocParam struct {
 	SNumber     int    `json:"s_number"`     //排序
 }
 
-func reqRecursive(str string, elem reflect.Type) string {
-	if !strings.Contains(elem.String(), ".") {
-		return ""
+//生成请求的表
+func DatamapGenerateReq(model interface{}) string {
+	if model == nil {
+		return "无"
 	}
-	if strings.HasPrefix(elem.String(), "*") || strings.Contains(elem.String(), "[]") { //如果是指针无法转义或者切片
-		return ""
+	str := "|参数名|必选|类型|说明|\r\n"
+	str += "|:----    |:---|:----- |-----   |\r\n"
+	if value, ok := model.(string); ok {
+		return str + value
 	}
+	elem := reflect.TypeOf(model).Elem()
+	list1 := list.New()
+	list1.PushBack(elem)
+	str1 := ""
+	for list1.Len() > 0 {
+		str1 += "\r\n"
+		e := list1.Remove(list1.Front()).(reflect.Type)
+		for {
+			if strings.Contains(e.String(), "[]") || strings.Contains(e.String(), "*") { //如果是切片需处理
+				e = e.Elem()
+			} else {
+				break
+			}
+		}
+		str1 += e.Name() + "\r\n\r\n"
+		str1 += reqRecursive(str, e, list1)
+	}
+	return str1
+}
+
+func reqRecursive(str string, elem reflect.Type, list1 *list.List) string {
 	for j := 0; j < elem.NumField(); j++ {
 		isNeed := elem.Field(j).Tag.Get("req")
 		if isNeed == "-" {
-			continue
-		}
-		if strings.Contains(elem.Field(j).Type.String(), ".") {
-			str += reqRecursive("", elem.Field(j).Type)
 			continue
 		}
 		validate := elem.Field(j).Tag.Get("validate")
@@ -93,28 +114,21 @@ func reqRecursive(str string, elem reflect.Type) string {
 		if comment == "" {
 			comment = "暂无,若需要联系开发者"
 		}
-		str += "|" + strings.ReplaceAll(elem.Field(j).Tag.Get("json"), ",omitempty", "") + "|" + require + "|" + elem.Field(j).Type.String() + "|" + comment + "|\r\n"
+		json := elem.Field(j).Tag.Get("json")
+		if json == "" {
+			continue
+		}
+		str += "|" + strings.ReplaceAll(json, ",omitempty", "") + "|" + require + "|" + elem.Field(j).Type.String() + "|" + comment + "|\r\n"
+		if strings.Contains(elem.Field(j).Type.String(), ".") {
+			list1.PushBack(elem.Field(j).Type)
+			continue
+		}
 	}
 	return str
 }
 
-//生成请求的表
-func DatamapGenerateReq(model interface{}) string {
-	if model == nil {
-		return "无"
-	}
-	str := "|参数名|必选|类型|说明|\r\n"
-	str += "|:----    |:---|:----- |-----   |\r\n"
-	if value, ok := model.(string); ok {
-		return str + value
-	}
-	elem := reflect.TypeOf(model).Elem()
-
-	return reqRecursive(str, elem)
-}
-
 //生成响应的表
-func DatamapGenerateResp(model interface{}) string {
+func DatamapGenerateResp(key string, model interface{}) string {
 	if model == nil {
 		return "无"
 	}
@@ -125,18 +139,32 @@ func DatamapGenerateResp(model interface{}) string {
 		return str + value
 	}
 	elem := reflect.TypeOf(model).Elem()
-	return respRecursive(str, elem)
+	list1 := list.New()
+	list1.PushBack(elem)
+	str1 := ""
+	for list1.Len() > 0 {
+		str1 += "\r\n"
+		e := list1.Remove(list1.Front()).(reflect.Type)
+		for {
+			if strings.Contains(e.String(), "[]") || strings.Contains(e.String(), "*") { //如果是切片需处理
+				e = e.Elem()
+			} else {
+				break
+			}
+		}
+		str1 += e.Name() + "\r\n\r\n"
+		str1 += respRecursive(key, str, e, list1)
+	}
+	return str1
 }
-func respRecursive(str string, elem reflect.Type) string {
-	if !strings.Contains(elem.String(), ".") {
-		return ""
-	}
-	if strings.HasPrefix(elem.String(), "*") || strings.Contains(elem.String(), "[]") { //如果是指针无法转义或者切片
-		return ""
-	}
+func respRecursive(key, str string, elem reflect.Type, list1 *list.List) string {
 	for i := 0; i < elem.NumField(); i++ {
-		isNeed := elem.Field(i).Tag.Get("resp")
+		isNeed := elem.Field(i).Tag.Get(key + "resp")
 		if isNeed == "-" {
+			continue
+		}
+		isNeed1 := elem.Field(i).Tag.Get("resp")
+		if isNeed1 == "-" {
 			continue
 		}
 		json := elem.Field(i).Tag.Get("json")
@@ -153,24 +181,17 @@ func respRecursive(str string, elem reflect.Type) string {
 		if comment == "" {
 			comment = "暂无,若需要联系开发者"
 		}
-		if strings.Contains(elem.Field(i).Type.String(), ".") {
-			//判断是否以空表头结尾
-			if strings.HasSuffix(str, "|参数名|类型|说明|\r\n|:----    |:----- |-----   |\r\n") {
-				str = strings.ReplaceAll(str, "|参数名|类型|说明|\r\n|:----    |:----- |-----   |\r\n", "")
-			} else {
-				str += "|" + strings.ReplaceAll(json, ",omitempty", "") + "|" + elem.Field(i).Type.String() + "|" + comment + "|\r\n"
-			}
-			str1 := "\r\n"
-			str1 += "|参数名|类型|说明|\r\n"
-			str1 += "|:----    |:----- |-----   |\r\n"
-			str += respRecursive(str1, elem.Field(i).Type)
+		if json == "" {
 			continue
 		}
 		str += "|" + strings.ReplaceAll(json, ",omitempty", "") + "|" + elem.Field(i).Type.String() + "|" + comment + "|\r\n"
+		if strings.Contains(elem.Field(i).Type.String(), ".") {
+			list1.PushBack(elem.Field(i).Type)
+			continue
+		}
 	}
 	return str
 }
-
 func stringTransf(str string) string {
 	index := 0
 	newstr := ""
