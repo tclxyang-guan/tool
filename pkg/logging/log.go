@@ -1,99 +1,106 @@
 package logging
 
 import (
-	"transfDoc/pkg/file"
 	"fmt"
+	"github.com/gin-gonic/gin"
+	"github.com/rs/zerolog"
+	"io"
 	"log"
 	"os"
-	"path/filepath"
-	"runtime"
+	"time"
+	"transfDoc/conf"
 )
 
-type Level int
+var logger zerolog.Logger
 
-var (
-	F *os.File
+func getLogFileName() string {
+	return fmt.Sprintf("%s%s.%s",
+		"log-",
+		time.Now().Format("2006-01-02"),
+		"log",
+	)
+}
 
-	DefaultPrefix      = ""
-	DefaultCallerDepth = 2
-
-	Logger     *log.Logger
-	logPrefix  = ""
-	levelFlags = []string{"DEBUG", "INFO", "WARN", "ERROR", "FATAL"}
-)
-
-const (
-	DEBUG Level = iota
-	INFO
-	WARNING
-	ERROR
-	FATAL
-)
-
-// Setup initialize the log instance
 func Setup() {
-	var err error
-	filePath := getLogFilePath()
-	fileName := getLogFileName()
-	fmt.Println("logfile:", filePath)
-	F, err = file.MustOpen(fileName, filePath)
-	if err != nil {
-		log.Fatalf("logging.Setup err: %v", err)
+	conf := conf.GetConfig()
+	var lever zerolog.Level
+	switch conf.LogLevel {
+	case "debug":
+		lever = zerolog.DebugLevel
+	case "info":
+		lever = zerolog.InfoLevel
+	case "error":
+		lever = zerolog.ErrorLevel
+	case "warn":
+		lever = zerolog.WarnLevel
+	case "trace":
+		lever = zerolog.TraceLevel
+	case "fatal":
+		lever = zerolog.FatalLevel
+	default:
+		lever = zerolog.DebugLevel
 	}
-
-	Logger = log.New(F, DefaultPrefix, log.LstdFlags)
+	zerolog.SetGlobalLevel(lever)
+	logger = zerolog.New(os.Stdout).With().CallerWithSkipFrameCount(3).Timestamp().Logger()
+	if conf.LogSavePath != "" { //为空串输出到控制台
+		var err error
+		fileName := getLogFileName()
+		var f *os.File
+		f, err = MustOpen(fileName, conf.LogSavePath)
+		if err != nil {
+			log.Fatalf("logging.Setup err: %v", err)
+		}
+		logger = zerolog.New(io.MultiWriter(f, os.Stdout)).
+			With().Str("app", conf.AppName).CallerWithSkipFrameCount(3).Timestamp().Logger()
+	}
 }
 
-// Debug output logs at debug level
 func Debug(v ...interface{}) {
-	setPrefix(DEBUG)
-	Logger.Println(v)
+	Debugf(v...)
+}
+func Debugf(v ...interface{}) {
+	requestId, format, msg := handleLogfParameter(v...)
+	logger.Debug().Str("requestId", requestId).Msgf(format, msg...)
 }
 
-// Info output logs at info level
-func Info(v ...interface{}) {
-	setPrefix(INFO)
-	Logger.Println(v)
+func Errorf(v ...interface{}) {
+	requestId, format, msg := handleLogfParameter(v...)
+	logger.Info().Str("requestId", requestId).Msgf(format, msg...)
 }
-
-// Info output logs at info level
-func Infof(format string, v ...interface{}) {
-	setPrefix(INFO)
-	Logger.Printf(format+"\n", v)
-}
-
-// Warn output logs at warn level
-func Warn(v ...interface{}) {
-	setPrefix(WARNING)
-	Logger.Println(v)
-}
-
-// Error output logs at error level
 func Error(v ...interface{}) {
-	setPrefix(ERROR)
-	Logger.Println(v)
+	Errorf(v...)
+}
+func Fatalf(v ...interface{}) {
+	requestId, format, msg := handleLogfParameter(v...)
+	logger.Fatal().Str("requestId", requestId).Msgf(format, msg...)
 }
 
-// Error output logs at error level
-func Errorf(format string, v ...interface{}) {
-	setPrefix(ERROR)
-	Logger.Printf(format+"\n", v)
+func Info(v ...interface{}) {
+	Infof(v...)
 }
-
-// Fatal output logs at fatal level
-func Fatal(v ...interface{}) {
-	setPrefix(FATAL)
-	Logger.Fatalln(v)
+func Infof(v ...interface{}) {
+	requestId, format, msg := handleLogfParameter(v...)
+	logger.Info().Str("requestId", requestId).Msgf(format, msg...)
 }
+func handleLogfParameter(args ...interface{}) (string, string, []interface{}) {
 
-// setPrefix set the prefix of the log output
-func setPrefix(level Level) {
-	_, file, line, ok := runtime.Caller(DefaultCallerDepth)
-	if ok {
-		logPrefix = fmt.Sprintf("[%s][%s:%d]", levelFlags[level], filepath.Base(file), line)
-	} else {
-		logPrefix = fmt.Sprintf("[%s]", levelFlags[level])
+	if len(args) < 1 {
+		return "", "", args
 	}
-
-	Logger.SetPrefix(logPrefix)
+	switch args[0].(type) {
+	case *gin.Context:
+		if len(args) < 2 {
+			return args[0].(*gin.Context).Request.Header.Get("requestId"), "", args[1:]
+		}
+		switch args[1].(type) {
+		case string:
+			return args[0].(*gin.Context).Request.Header.Get("requestId"), args[1].(string), args[2:]
+		default:
+			return args[0].(*gin.Context).Request.Header.Get("requestId"), "", args[1:]
+		}
+	case string:
+		return "", args[0].(string), args[1:]
+	default:
+		return "", "", args
+	}
 }

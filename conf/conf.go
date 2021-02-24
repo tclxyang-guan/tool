@@ -53,6 +53,7 @@ func (c *Conf) GetMysqlConf() *MySQLConf {
 
 //Conf config of different environments
 type Conf struct {
+	AppName         string `yaml:"appname"`
 	ApiKey          string `yaml:"apikey"`
 	ApiToken        string `yaml:"apitoken"`
 	ShowDocOpen     bool   `yaml:"showdocopen"`
@@ -62,6 +63,7 @@ type Conf struct {
 	RuntimeRootPath string `yaml:"runtimerootpath"`
 	LogSavePath     string `yaml:"logsavepath"`
 	LogSaveName     string `yaml:"logsavename"`
+	LogLevel        string `yaml:"loglevel"`
 	LogFileExt      string `yaml:"logfileext"`
 	TimeFormat      string `yaml:"timeformat"`
 	Env             EnvConf

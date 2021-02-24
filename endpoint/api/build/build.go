@@ -16,7 +16,7 @@ import (
 func BuildCreate(c *gin.Context) {
 	req := models.Build{} //为了方便直接使用的models struct
 	rsp := common.Rsp{}
-	c.BindJSON(&req)
+	common.BindJSON(c, &req)
 	logging.Infof("build create req:%+v", req)
 
 	rsp.ReplySuccess(c, "")
@@ -27,7 +27,7 @@ func BuildCreate(c *gin.Context) {
 func BuildUpdate(c *gin.Context) {
 	req := map[string]interface{}{}
 	rsp := common.Rsp{}
-	c.BindJSON(&req)
+	common.BindJSON(c, &req)
 	logging.Infof("BuildUpdate req:%+v", req)
 
 	rsp.ReplySuccess(c, "")
@@ -44,9 +44,6 @@ func BuildPage(c *gin.Context) {
 	build2.ID = 2
 	build2.BuildName = "b"
 	builds := []models.Build{build1, build2}
-	rsp.ReplySuccess(c, map[string]interface{}{
-		"list":  builds,
-		"count": 10,
-	})
+	rsp.ReplySuccess(c, common.ListRsp{builds, 2})
 	return
 }

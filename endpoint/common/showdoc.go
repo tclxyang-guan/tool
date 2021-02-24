@@ -6,52 +6,126 @@
 package common
 
 import (
+	"bytes"
 	"container/list"
+	"encoding/json"
+	"errors"
+	"github.com/gin-gonic/gin"
+	"io"
+	"io/ioutil"
+	"net/http"
+	"net/url"
 	"reflect"
+	"strconv"
 	"strings"
-	"transfDoc/models"
+	"transfDoc/conf"
+	"transfDoc/pkg/logging"
 )
 
-//Req "|字段一|是|int|说明一|\r\n|字段二|是|int|说明二|\r\n"  可直接传入字符串也可为结构体指针
-//Rsp "|字段一|int|说明一|\r\n|字段二|int|说明二|\r\n" 可直接传入字符串也可为结构体指针
-var ShowDocMap = map[string]ShowDocData{
-	"BuildCreate": {
-		&models.Build{},
-		&Rsp{Data: nil},
-		"楼栋",
-		"楼栋创建接口",
-		0,
-	}, //示例
-	"BuildPage": {
-		nil,
-		&Rsp{Data: &models.Build{}},
-		"楼栋",
-		"楼栋分页接口",
-		0,
-	}, //示例
-	"BuildUpdate": {
-		&models.Build{},
-		&Rsp{Data: nil},
-		"楼栋",
-		"楼栋修改接口",
-		0,
-	}, //示例
-	"BuildUpdateStatus": {
-		nil,
-		&Rsp{Data: nil},
-		"楼栋",
-		"楼栋修改状态接口",
-		0,
-	}, //示例
+func DeferShowDoc(c *gin.Context) {
+	if !conf.GetConfig().ShowDocOpen {
+		logging.Errorf(c, "not open showdoc")
+		return
+	}
+	pageTitle := c.Request.Header.Get("title")
+	if pageTitle == "" {
+		logging.Errorf(c, "not have pageTitle in header")
+		return
+	}
+	pageTitle, _ = url.PathUnescape(pageTitle)
+	//接口没有文件夹和顺序也没关系
+	catName := c.Request.Header.Get("dir")
+	if pageTitle != "" {
+		catName, _ = url.PathUnescape(catName)
+	}
+	sNumber, _ := strconv.Atoi(c.Request.Header.Get("number"))
+	req, _ := c.Get("req")
+	reqBody, _ := c.Get("reqBody")
+	ShowDocUrl := conf.GetConfig().ShowDocUrl
+	method := c.Request.Method
+	usdp := UploadShowDocParam{}
+	usdp.ApiKey = conf.GetConfig().ApiKey
+	usdp.ApiToken = conf.GetConfig().ApiToken
+	usdp.CatName = catName
+	usdp.PageTitle = pageTitle
+	usdp.SNumber = sNumber
+	reqParam := string(reqBody.([]byte))
+	if strings.ToUpper(method) == "GET" || strings.ToUpper(method) == "DELETE" {
+		reqParam = "同rul"
+	}
+	var resp, transfBody string
+	rsp, ok := c.Get("rsp")
+	if ok {
+		respBody, _ := json.Marshal(rsp)
+		respParam := string(respBody)
+		respParam = strings.ReplaceAll(respParam, "{", "{\r\n\t")
+		respParam = strings.ReplaceAll(respParam, "}", "\t\r\n}\r\n")
+		respParam = strings.ReplaceAll(respParam, ",", ",\r\n\t")
+		transfBody = stringTransf(string(respBody))
+		resp = DatamapGenerateResp(rsp)
+	}
+
+	data, ok := rsp.(Rsp)
+	if ok {
+		resp += DatamapGenerateResp(data.Data)
+		list, ok := data.Data.(ListRsp)
+		if ok {
+			resp += DatamapGenerateResp(list.List)
+		}
+		list1, ok := data.Data.(*ListRsp)
+		if ok {
+			resp += DatamapGenerateResp(list1.List)
+		}
+	}
+	usdp.PageContent = "" +
+		"##### 简要描述\r\n" +
+		"\r\n" +
+		"- " + usdp.PageTitle + "\r\n" +
+		"\r\n" +
+		"##### 请求URL\r\n" +
+		"- ` " + c.Request.URL.String() + " `\r\n" +
+		"\r\n" +
+		"##### 请求方式\r\n" +
+		"- " + method + "\r\n" +
+		"\r\n" +
+		"##### 参数\r\n" +
+		DatamapGenerateReq(req) +
+		"\r\n" +
+		"\r\n" +
+		"##### 请求示例\r\n" +
+		"\r\n" +
+		"```\r\n" +
+		reqParam + "\r\n" +
+		"```\r\n" +
+		"##### 返回示例\r\n" +
+		"\r\n" +
+		"```\r\n" +
+		transfBody + "\r\n" +
+		"```\r\n" +
+		"\r\n" +
+		"##### 返回参数说明\r\n" +
+		"\r\n" +
+		resp + "\r\n" +
+		"\r\n" +
+		"##### 备注\r\n" +
+		"\r\n"
+	//调用showdoc接口
+	b, err := json.Marshal(usdp)
+	if err != nil {
+		logging.Errorf(c, "show marshal err:%s", err.Error())
+		return
+	}
+	var m map[string]interface{}
+	err = newRequest("post", ShowDocUrl, bytes.NewReader(b), "", &m)
+	if err != nil {
+		logging.Errorf(c, "show NewRequest err:%s", err.Error())
+		return
+	}
+	if m["error_code"].(float64) != 0 {
+		logging.Errorf(c, "show NewRequest err:%s", m["error_message"])
+	}
 }
 
-type ShowDocData struct {
-	Req       interface{} //请求参数
-	Resp      *Rsp        //返回参数
-	CatName   string      //文件夹
-	PageTitle string      //标题
-	SNumber   int         //排序
-}
 type UploadShowDocParam struct {
 	ApiKey      string `json:"api_key"`
 	ApiToken    string `json:"api_token"`
@@ -69,29 +143,44 @@ func DatamapGenerateReq(model interface{}) string {
 	str := "|参数名|必选|类型|说明|\r\n"
 	str += "|:----    |:---|:----- |-----   |\r\n"
 	if value, ok := model.(string); ok {
+		if value == "" {
+			return "无"
+		}
 		return str + value
 	}
-	elem := reflect.TypeOf(model).Elem()
+	elem := reflect.TypeOf(model)
 	list1 := list.New()
 	list1.PushBack(elem)
 	str1 := ""
+	m := map[string]bool{} //防止重复建相同的表结构
 	for list1.Len() > 0 {
 		str1 += "\r\n"
 		e := list1.Remove(list1.Front()).(reflect.Type)
 		for {
-			if strings.Contains(e.String(), "[]") || strings.Contains(e.String(), "*") { //如果是切片需处理
+			if strings.HasPrefix(e.String(), "[]") || strings.HasPrefix(e.String(), "*") { //如果是切片需处理
 				e = e.Elem()
 			} else {
 				break
 			}
 		}
-		str1 += e.Name() + "\r\n\r\n"
-		str1 += reqRecursive(str, e, list1)
+		if strings.HasPrefix(e.String(), "map") {
+			continue
+		}
+		tbl := e.Name() + "\r\n\r\n"
+		tbl += reqRecursive(str, e, list1, m)
+		if !strings.HasSuffix(tbl, str) { //防止重复建相同的表结构
+			str1 += tbl
+		}
 	}
 	return str1
 }
 
-func reqRecursive(str string, elem reflect.Type, list1 *list.List) string {
+func reqRecursive(str string, elem reflect.Type, list1 *list.List, m map[string]bool) string {
+	if m[elem.String()] { //防止重复建相同的表结构
+		return str
+	} else {
+		m[elem.String()] = true
+	}
 	for j := 0; j < elem.NumField(); j++ {
 		isNeed := elem.Field(j).Tag.Get("req")
 		if isNeed == "-" {
@@ -115,7 +204,8 @@ func reqRecursive(str string, elem reflect.Type, list1 *list.List) string {
 			comment = "暂无,若需要联系开发者"
 		}
 		json := elem.Field(j).Tag.Get("json")
-		if json == "" {
+		if elem.Field(j).Anonymous { //是镶嵌结构体
+			str += reqRecursive("", elem.Field(j).Type, list1, m)
 			continue
 		}
 		str += "|" + strings.ReplaceAll(json, ",omitempty", "") + "|" + require + "|" + elem.Field(j).Type.String() + "|" + comment + "|\r\n"
@@ -128,7 +218,7 @@ func reqRecursive(str string, elem reflect.Type, list1 *list.List) string {
 }
 
 //生成响应的表
-func DatamapGenerateResp(key string, model interface{}) string {
+func DatamapGenerateResp(model interface{}) string {
 	if model == nil {
 		return "无"
 	}
@@ -136,35 +226,46 @@ func DatamapGenerateResp(key string, model interface{}) string {
 	str := "|参数名|类型|说明|\r\n"
 	str += "|:----    |:----- |-----   |\r\n"
 	if value, ok := model.(string); ok {
+		if value == "" {
+			return "无"
+		}
 		return str + value
 	}
-	elem := reflect.TypeOf(model).Elem()
+	elem := reflect.TypeOf(model)
 	list1 := list.New()
 	list1.PushBack(elem)
 	str1 := ""
+	m := map[string]bool{} //防止重复建相同的表结构
 	for list1.Len() > 0 {
 		str1 += "\r\n"
 		e := list1.Remove(list1.Front()).(reflect.Type)
 		for {
-			if strings.Contains(e.String(), "[]") || strings.Contains(e.String(), "*") { //如果是切片需处理
+			if strings.HasPrefix(e.String(), "[]") || strings.HasPrefix(e.String(), "*") { //如果是切片需处理
 				e = e.Elem()
 			} else {
 				break
 			}
 		}
-		str1 += e.Name() + "\r\n\r\n"
-		str1 += respRecursive(key, str, e, list1)
+		if strings.HasPrefix(e.String(), "map") {
+			continue
+		}
+		tbl := e.Name() + "\r\n\r\n"
+		tbl += respRecursive(str, e, list1, m)
+		if !strings.HasSuffix(tbl, str) { //防止重复建相同的表结构
+			str1 += tbl
+		}
 	}
 	return str1
 }
-func respRecursive(key, str string, elem reflect.Type, list1 *list.List) string {
+func respRecursive(str string, elem reflect.Type, list1 *list.List, m map[string]bool) string {
+	if m[elem.String()] { //防止重复建相同的表结构
+		return str
+	} else {
+		m[elem.String()] = true
+	}
 	for i := 0; i < elem.NumField(); i++ {
-		isNeed := elem.Field(i).Tag.Get(key + "resp")
+		isNeed := elem.Field(i).Tag.Get("resp")
 		if isNeed == "-" {
-			continue
-		}
-		isNeed1 := elem.Field(i).Tag.Get("resp")
-		if isNeed1 == "-" {
 			continue
 		}
 		json := elem.Field(i).Tag.Get("json")
@@ -181,7 +282,8 @@ func respRecursive(key, str string, elem reflect.Type, list1 *list.List) string 
 		if comment == "" {
 			comment = "暂无,若需要联系开发者"
 		}
-		if json == "" {
+		if elem.Field(i).Anonymous { //是否镶嵌结构体
+			str += respRecursive("", elem.Field(i).Type, list1, m)
 			continue
 		}
 		str += "|" + strings.ReplaceAll(json, ",omitempty", "") + "|" + elem.Field(i).Type.String() + "|" + comment + "|\r\n"
@@ -234,4 +336,41 @@ func stringTransf(str string) string {
 		}
 	}
 	return newstr
+}
+func newRequest(method, url string, body io.Reader, ContentType string, data interface{}) (err error) {
+	method = strings.ToUpper(method)
+	if method == "POST" {
+		client := &http.Client{}
+		req, err := http.NewRequest(method, url, body)
+		if err != nil {
+			return err
+		}
+		if ContentType == "" {
+			req.Header.Set("content-type", "application/json; charset=utf-8")
+		} else {
+			req.Header.Set("content-type", ContentType)
+		}
+		resp, err := client.Do(req)
+		if err != nil {
+			return err
+		}
+		defer resp.Body.Close()
+		b, err := ioutil.ReadAll(resp.Body)
+		if err != nil {
+			return err
+		}
+		return json.Unmarshal(b, data)
+	} else if method == "GET" {
+		resp, err := http.Get(url)
+		if err != nil {
+			return err
+		}
+		defer resp.Body.Close()
+		b, err := ioutil.ReadAll(resp.Body)
+		if err != nil {
+			return err
+		}
+		return json.Unmarshal(b, data)
+	}
+	return errors.New("请求方式错误")
 }
