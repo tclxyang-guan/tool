@@ -3,7 +3,7 @@
 * @Date:2020/11/23 16:23
  */
 
-package common
+package transfDoc
 
 import (
 	"bytes"
@@ -18,19 +18,37 @@ import (
 	"reflect"
 	"strconv"
 	"strings"
-	"transfDoc/conf"
-	"transfDoc/pkg/logging"
 )
 
-func DeferShowDoc(c *gin.Context) {
-	if !conf.GetConfig().ShowDocOpen {
-		logging.Errorf(c, "not open showdoc")
-		return
+var cli *client
+
+type client struct {
+	DocOpen int     `comment:"0不生成文档 1生成ShowDoc 2生成markDown"`
+	ShowDoc ShowDoc `comment:"生成markDown路径地址"`
+}
+type ShowDoc struct {
+	Url      string
+	ApiKey   string
+	ApiToken string
+}
+
+func New(docOpen int, showDoc ShowDoc) *client {
+	return &client{docOpen, showDoc}
+}
+func GetClient() *client {
+	return cli
+}
+func (cli *client) Upload(c *gin.Context) error {
+	if cli.DocOpen == 0 {
+		return nil
+	} else if cli.DocOpen == 1 {
+		return cli.uploadShowDoc(c)
 	}
+}
+func (cli *client) uploadShowDoc(c *gin.Context) error {
 	pageTitle := c.Request.Header.Get("title")
 	if pageTitle == "" {
-		logging.Errorf(c, "not have pageTitle in header")
-		return
+		return errors.New("not found title in header")
 	}
 	pageTitle, _ = url.PathUnescape(pageTitle)
 	//接口没有文件夹和顺序也没关系
@@ -41,11 +59,10 @@ func DeferShowDoc(c *gin.Context) {
 	sNumber, _ := strconv.Atoi(c.Request.Header.Get("number"))
 	req, _ := c.Get("req")
 	reqBody, _ := c.Get("reqBody")
-	ShowDocUrl := conf.GetConfig().ShowDocUrl
 	method := c.Request.Method
 	usdp := UploadShowDocParam{}
-	usdp.ApiKey = conf.GetConfig().ApiKey
-	usdp.ApiToken = conf.GetConfig().ApiToken
+	usdp.ApiKey = cli.ShowDoc.ApiKey
+	usdp.ApiToken = cli.ShowDoc.ApiToken
 	usdp.CatName = catName
 	usdp.PageTitle = pageTitle
 	usdp.SNumber = sNumber
@@ -112,18 +129,17 @@ func DeferShowDoc(c *gin.Context) {
 	//调用showdoc接口
 	b, err := json.Marshal(usdp)
 	if err != nil {
-		logging.Errorf(c, "show marshal err:%s", err.Error())
-		return
+		return errors.New("marshal showdoc err:" + err.Error())
 	}
 	var m map[string]interface{}
-	err = newRequest("post", ShowDocUrl, bytes.NewReader(b), "", &m)
+	err = newRequest("post", cli.ShowDoc.Url, bytes.NewReader(b), "", &m)
 	if err != nil {
-		logging.Errorf(c, "show NewRequest err:%s", err.Error())
-		return
+		return errors.New(err.Error())
 	}
 	if m["error_code"].(float64) != 0 {
-		logging.Errorf(c, "show NewRequest err:%s", m["error_message"])
+		return errors.New(m["error_message"].(string))
 	}
+	return nil
 }
 
 type UploadShowDocParam struct {

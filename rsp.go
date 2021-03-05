@@ -2,18 +2,12 @@
 * @Auther:gy
 * @Date:2020/11/23 16:23
  */
-package common
+package transfDoc
 
 import (
 	"github.com/gin-gonic/gin"
-	ut "github.com/go-playground/universal-translator"
-	"github.com/go-playground/validator/v10"
 	"net/http"
-	"reflect"
 	"transfDoc/utils/e"
-
-	zhongwen "github.com/go-playground/locales/zh"
-	zh_translations "github.com/go-playground/validator/v10/translations/zh"
 )
 
 type ListRsp struct {
@@ -53,41 +47,14 @@ func (r Rsp) ReplyFailOperation(c *gin.Context, msg string) {
 	ReplyJson(r, c)
 }
 
-// 回复token验证失败消息
-func (r Rsp) ReplyTokenError(c *gin.Context) {
-	r.Code = e.ERROR_AUTH_CHECK_TOKEN_FAIL
-	r.Msg = e.GetMsg(r.Code)
+// 回复自定义code 自定义消息
+func (r Rsp) Reply(c *gin.Context, code int, msg string) {
+	r.Code = code
+	r.Msg = msg
 	ReplyJson(r, c)
 }
 func ReplyJson(r Rsp, c *gin.Context) {
 	c.Set("rsp", r)
-	go DeferShowDoc(c)
+	go GetClient().Upload(c)
 	c.JSON(http.StatusOK, r)
-}
-
-var Validate *validator.Validate
-var Trans ut.Translator
-
-func init() {
-	zh := zhongwen.New()
-	uni := ut.New(zh, zh)
-	Trans, _ = uni.GetTranslator("zh")
-
-	Validate = validator.New()
-	Validate.RegisterTagNameFunc(func(field reflect.StructField) string {
-		label := field.Tag.Get("label")
-		if label == "" {
-			return field.Name
-		}
-		return label
-	})
-	zh_translations.RegisterDefaultTranslations(Validate, Trans)
-}
-
-func TransError(err error) string {
-	s := err.(validator.ValidationErrors).Translate(Trans)
-	for _, value := range s {
-		return value
-	}
-	return "参数错误"
 }
