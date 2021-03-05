@@ -3,13 +3,14 @@
 * @Date:2020/11/23 16:23
  */
 
-package transfDoc
+package main
 
 import (
 	"bytes"
 	"container/list"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"github.com/gin-gonic/gin"
 	"io"
 	"io/ioutil"
@@ -32,8 +33,40 @@ type ShowDoc struct {
 	ApiToken string
 }
 
-func New(docOpen int, showDoc ShowDoc) *client {
+func EnableShowdoc(c *gin.Engine, docOpen int, showDoc ShowDoc) *client {
+	if docOpen != 0 {
+		c.Use(RequestParam())
+	}
 	return &client{docOpen, showDoc}
+}
+func RequestParam() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		data, _ := c.GetRawData()
+		fmt.Println(string(data))
+		c.Set("reqBody", data)
+		c.Request.Body = ioutil.NopCloser(bytes.NewBuffer(data))
+	}
+}
+func BindJSON(c *gin.Context, req interface{}) error {
+	err := c.BindJSON(req)
+	if err != nil {
+		return err
+	}
+	//验证参数
+	if err := Validate.Struct(req); err != nil {
+		return errors.New(TransError(err))
+	}
+	if cli.DocOpen != 0 {
+		c.Set("req", req)
+	}
+	return err
+}
+func BindJSONNotWithValidate(c *gin.Context, req interface{}) error {
+	err := c.BindJSON(req)
+	if cli.DocOpen != 0 {
+		c.Set("req", req)
+	}
+	return err
 }
 func GetClient() *client {
 	return cli
