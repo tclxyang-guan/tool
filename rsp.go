@@ -6,8 +6,8 @@ package transfDoc
 
 import (
 	"github.com/gin-gonic/gin"
+	"github.com/guanyang-lab/transfDoc/utils/e"
 	"net/http"
-	"transfDoc/utils/e"
 )
 
 type ListRsp struct {
