@@ -44,6 +44,7 @@ func (cli *client) Upload(c *gin.Context) error {
 	} else if cli.DocOpen == 1 {
 		return cli.uploadShowDoc(c)
 	}
+	return nil
 }
 func (cli *client) uploadShowDoc(c *gin.Context) error {
 	pageTitle := c.Request.Header.Get("title")
