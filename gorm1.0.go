@@ -10,8 +10,8 @@ import (
 
 type Model struct {
 	ID        uint    `gorm:"primary_key;comment:'数据id'" json:"id" req:"-"`
-	CreatedAt string  `json:"created_at,omitempty" comment:"创建时间" req:"-"`
-	UpdatedAt string  `json:"updated_at,omitempty" comment:"修改时间" req:"-"`
+	CreatedAt string  `json:"created_at" gorm:"type:varchar(30);comment:创建时间" req:"-"`
+	UpdatedAt string  `json:"updated_at" gorm:"type:varchar(30);comment:修改时间" req:"-"`
 	DeletedAt *string `gorm:"type:varchar(30);default:null;comment:'删除时间'" json:"deleted_at" resp:"-" req:"-"`
 }
 
