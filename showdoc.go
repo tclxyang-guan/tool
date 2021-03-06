@@ -35,11 +35,11 @@ type ShowDoc struct {
 
 func EnableShowdoc(c *gin.Engine, docOpen int, showDoc ShowDoc) {
 	if docOpen != 0 {
-		c.Use(RequestParam())
+		c.Use(requestParam())
 	}
 	cli = &client{docOpen, showDoc}
 }
-func RequestParam() gin.HandlerFunc {
+func requestParam() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		data, _ := c.GetRawData()
 		fmt.Println(string(data))
@@ -94,7 +94,7 @@ func (cli *client) uploadShowDoc(c *gin.Context) error {
 	req, _ := c.Get("req")
 	reqBody, _ := c.Get("reqBody")
 	method := c.Request.Method
-	usdp := UploadShowDocParam{}
+	usdp := uploadShowDocParam{}
 	usdp.ApiKey = cli.ShowDoc.ApiKey
 	usdp.ApiToken = cli.ShowDoc.ApiToken
 	usdp.CatName = catName
@@ -176,7 +176,7 @@ func (cli *client) uploadShowDoc(c *gin.Context) error {
 	return nil
 }
 
-type UploadShowDocParam struct {
+type uploadShowDocParam struct {
 	ApiKey      string `json:"api_key"`
 	ApiToken    string `json:"api_token"`
 	CatName     string `json:"cat_name"`     //文件夹
