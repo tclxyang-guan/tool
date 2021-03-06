@@ -20,13 +20,9 @@ import (
 	"time"
 )
 
-var db *gorm.DB
-var err error
-
-func GetDB2() *gorm.DB {
-	return db
-}
-func EnableMysql2(conf MysqlConf) error {
+func EnableMysql2(conf MysqlConf) (*gorm.DB, error) {
+	var db *gorm.DB
+	var err error
 	// 参考 https://github.com/go-sql-driver/mysql#dsn-data-source-name 获取详情
 	/*newLogger := logger.New(
 		log.New(os.Stdout, "\r\n", log.LstdFlags), // io writer
@@ -59,7 +55,7 @@ func EnableMysql2(conf MysqlConf) error {
 		DisableForeignKeyConstraintWhenMigrating: true, //注意 AutoMigrate 会自动创建数据库外键约束，您可以在初始化时禁用此功能
 	})
 	if err != nil {
-		return err
+		return nil, err
 	}
 	//自己定义的回调方法Register名字随意
 	db.Callback().Create().Before("gorm:create").Register("gorm:update_time_stamp", updateTimeStampForCreateCallback2)
@@ -68,7 +64,7 @@ func EnableMysql2(conf MysqlConf) error {
 	db.Callback().Delete().Replace("gorm:delete", deleteCallback2)
 	sqlDB, err := db.DB()
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	// SetMaxIdleConns 设置空闲连接池中连接的最大数量
@@ -77,10 +73,7 @@ func EnableMysql2(conf MysqlConf) error {
 	sqlDB.SetMaxOpenConns(conf.MaxOpenConns)
 	// SetConnMaxLifetime 设置了连接可复用的最大时间
 	sqlDB.SetConnMaxLifetime(time.Hour)
-	return nil
-}
-func AutoMigrate2(values ...interface{}) {
-	db.AutoMigrate(values...)
+	return db, nil
 }
 
 type Model2 struct {

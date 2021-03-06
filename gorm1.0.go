@@ -8,12 +8,6 @@ import (
 	"time"
 )
 
-var tdb *gorm.DB
-
-func GetDB() *gorm.DB {
-	return tdb
-}
-
 type Model struct {
 	ID        uint    `gorm:"primary_key;comment:'数据id'" json:"id" req:"-"`
 	CreatedAt string  `json:"created_at,omitempty" comment:"创建时间" req:"-"`
@@ -44,8 +38,9 @@ type MysqlConf struct {
 }
 
 // 初始化数据库
-func EnableMysql(conf MysqlConf) error {
+func EnableMysql(conf MysqlConf) (*gorm.DB, error) {
 	var err error
+	var tdb *gorm.DB
 	tdb, err = gorm.Open("mysql", fmt.Sprintf("%s:%s@tcp(%s)/%s?charset=utf8mb4&parseTime=True&loc=Local",
 		conf.Username,
 		conf.Password,
@@ -54,7 +49,7 @@ func EnableMysql(conf MysqlConf) error {
 
 	if err != nil {
 		log.Fatalf("models.Setup err: %v", err)
-		return err
+		return nil, err
 	}
 	if conf.Prefix != "" {
 		gorm.DefaultTableNameHandler = func(db *gorm.DB, defaultTableName string) string {
@@ -71,10 +66,7 @@ func EnableMysql(conf MysqlConf) error {
 	tdb.DB().SetMaxIdleConns(conf.MaxIdleConns)
 	tdb.DB().SetMaxOpenConns(conf.MaxOpenConns)
 	tdb.DB().SetConnMaxLifetime(time.Duration(conf.ConnMaxLifetime * int64(time.Millisecond)))
-	return nil
-}
-func AutoMigrate(values ...interface{}) {
-	tdb.AutoMigrate(values...)
+	return tdb, nil
 }
 
 // // 注册新建钩子在持久化之前
