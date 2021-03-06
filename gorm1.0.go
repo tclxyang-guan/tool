@@ -44,7 +44,7 @@ type MysqlConf struct {
 }
 
 // 初始化数据库
-func EnableMysql(conf MysqlConf) {
+func EnableMysql(conf MysqlConf) error {
 	var err error
 	tdb, err = gorm.Open("mysql", fmt.Sprintf("%s:%s@tcp(%s)/%s?charset=utf8mb4&parseTime=True&loc=Local",
 		conf.Username,
@@ -54,6 +54,7 @@ func EnableMysql(conf MysqlConf) {
 
 	if err != nil {
 		log.Fatalf("models.Setup err: %v", err)
+		return err
 	}
 	if conf.Prefix != "" {
 		gorm.DefaultTableNameHandler = func(db *gorm.DB, defaultTableName string) string {
@@ -70,6 +71,7 @@ func EnableMysql(conf MysqlConf) {
 	tdb.DB().SetMaxIdleConns(conf.MaxIdleConns)
 	tdb.DB().SetMaxOpenConns(conf.MaxOpenConns)
 	tdb.DB().SetConnMaxLifetime(time.Duration(conf.ConnMaxLifetime * int64(time.Millisecond)))
+	return nil
 }
 func AutoMigrate(values ...interface{}) {
 	tdb.AutoMigrate(values...)

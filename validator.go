@@ -6,7 +6,6 @@
 package main
 
 import (
-	"github.com/gin-gonic/gin"
 	zhongwen "github.com/go-playground/locales/zh"
 	ut "github.com/go-playground/universal-translator"
 	"github.com/go-playground/validator/v10"
