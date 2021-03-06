@@ -17,7 +17,7 @@ import (
 var Validate *validator.Validate
 var Trans ut.Translator
 
-func EnableValidate() {
+func init() {
 	zh := zhongwen.New()
 	uni := ut.New(zh, zh)
 	Trans, _ = uni.GetTranslator("zh")
