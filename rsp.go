@@ -6,7 +6,7 @@ package main
 
 import (
 	"github.com/gin-gonic/gin"
-	"github.com/guanyang-lab/transfDoc/utils/e"
+	"github.com/guanyang-lab/tool/utils/e"
 	"net/http"
 )
 

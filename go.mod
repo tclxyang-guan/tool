@@ -1,4 +1,4 @@
-module github.com/guanyang-lab/transfDoc
+module github.com/guanyang-lab/tool
 
 go 1.15
 
