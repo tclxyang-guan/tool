@@ -2,7 +2,7 @@
 * @Auther:gy
 * @Date:2020/11/23 16:23
  */
-package main
+package tool
 
 import (
 	"github.com/gin-gonic/gin"

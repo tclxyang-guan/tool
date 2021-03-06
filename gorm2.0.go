@@ -3,7 +3,7 @@
 * @Date:2020/10/23 11:01
  */
 
-package main
+package tool
 
 import (
 	"database/sql"

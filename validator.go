@@ -3,7 +3,7 @@
 * @Date:2021/3/5 19:44
  */
 
-package main
+package tool
 
 import (
 	zhongwen "github.com/go-playground/locales/zh"
