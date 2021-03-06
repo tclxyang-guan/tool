@@ -33,11 +33,11 @@ type ShowDoc struct {
 	ApiToken string
 }
 
-func EnableShowdoc(c *gin.Engine, docOpen int, showDoc ShowDoc) *client {
+func EnableShowdoc(c *gin.Engine, docOpen int, showDoc ShowDoc) {
 	if docOpen != 0 {
 		c.Use(RequestParam())
 	}
-	return &client{docOpen, showDoc}
+	cli = &client{docOpen, showDoc}
 }
 func RequestParam() gin.HandlerFunc {
 	return func(c *gin.Context) {
