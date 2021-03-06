@@ -14,6 +14,7 @@ import (
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
+	"gorm.io/gorm/logger"
 	"gorm.io/gorm/schema"
 	"log"
 	"reflect"
@@ -51,8 +52,8 @@ func EnableMysql2(conf MysqlConf) (*gorm.DB, error) {
 			TablePrefix:   conf.Prefix, // 表名前缀，`User` 的表名应该是 `t_users`
 			SingularTable: true,        // 使用单数表名，启用该选项，此时，`User` 的表名应该是 `t_user`
 		},
-		//Logger: logger.Default.LogMode(logger.Info), //允许通过覆盖此选项更改 GORM 的默认 logger
-		DisableForeignKeyConstraintWhenMigrating: true, //注意 AutoMigrate 会自动创建数据库外键约束，您可以在初始化时禁用此功能
+		Logger:                                   logger.Default.LogMode(logger.Info), //允许通过覆盖此选项更改 GORM 的默认 logger
+		DisableForeignKeyConstraintWhenMigrating: true,                                //注意 AutoMigrate 会自动创建数据库外键约束，您可以在初始化时禁用此功能
 	})
 	if err != nil {
 		return nil, err
