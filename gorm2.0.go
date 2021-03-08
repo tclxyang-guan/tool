@@ -9,14 +9,12 @@ import (
 	"database/sql"
 	"database/sql/driver"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 	"gorm.io/gorm/logger"
 	"gorm.io/gorm/schema"
-	"log"
 	"reflect"
 	"time"
 )
@@ -198,8 +196,8 @@ func (sd SoftDeleteDeleteClause) ModifyStatement(stmt *gorm.Statement) {
 func updateTimeStampForCreateCallback2(db *gorm.DB) {
 	if db.Statement.Schema != nil {
 		currentTime := getCurrentTime()
-		SetSchemaFieldValue(db, "CreatedAt", currentTime)
-		SetSchemaFieldValue(db, "UpdatedAt", currentTime)
+		db.Statement.SetColumn("CreatedAt", currentTime)
+		db.Statement.SetColumn("UpdatedAt", currentTime)
 	}
 }
 
@@ -264,20 +262,6 @@ func deleteCallback2(db *gorm.DB) {
 			}
 		}
 	}
-}
-
-func SetSchemaFieldValue(db *gorm.DB, fieldName string, value interface{}) error {
-	field := db.Statement.Schema.LookUpField(fieldName)
-	if field == nil {
-		return errors.New("can't find the field")
-	}
-	err := field.Set(db.Statement.ReflectValue, value)
-	if err != nil {
-		log.Println("schema field set err:", err)
-		return err
-	}
-
-	return nil
 }
 
 func getCurrentTime() string {
