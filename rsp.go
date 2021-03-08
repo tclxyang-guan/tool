@@ -6,7 +6,6 @@ package tool
 
 import (
 	"github.com/gin-gonic/gin"
-	"github.com/guanyang-lab/tool/utils/e"
 	"net/http"
 )
 
@@ -22,27 +21,27 @@ type Rsp struct {
 }
 
 func (r Rsp) GetMessage() string {
-	return e.GetMsg(r.Code)
+	return GetMsg(r.Code)
 }
 
 // 回复参数错误消息
 func (r Rsp) ReplyInvalidParam(c *gin.Context) {
-	r.Code = e.INVALID_PARAMS
-	r.Msg = e.GetMsg(r.Code)
+	r.Code = INVALID_PARAMS
+	r.Msg = GetMsg(r.Code)
 	ReplyJson(r, c)
 }
 
 // 回复成功， data为返回值
 func (r Rsp) ReplySuccess(c *gin.Context, data interface{}) {
-	r.Code = e.SUCCESS
-	r.Msg = e.GetMsg(r.Code)
+	r.Code = SUCCESS
+	r.Msg = GetMsg(r.Code)
 	r.Data = data
 	ReplyJson(r, c)
 }
 
 // 回复操作失败给前端，msg为失败原因
 func (r Rsp) ReplyFailOperation(c *gin.Context, msg string) {
-	r.Code = e.FAILE_TO_CREATE_OP
+	r.Code = FAILE_TO_CREATE_OP
 	r.Msg = msg
 	ReplyJson(r, c)
 }

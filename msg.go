@@ -1,4 +1,4 @@
-package e
+package tool
 
 var MsgFlags = map[int]string{
 	SUCCESS:            "ok",

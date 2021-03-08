@@ -1,4 +1,4 @@
-package e
+package tool
 
 const (
 	SUCCESS            = 0
