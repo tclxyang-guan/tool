@@ -196,8 +196,18 @@ func (sd SoftDeleteDeleteClause) ModifyStatement(stmt *gorm.Statement) {
 func updateTimeStampForCreateCallback2(db *gorm.DB) {
 	if db.Statement.Schema != nil {
 		currentTime := getCurrentTime()
-		db.Statement.SetColumn("CreatedAt", currentTime)
-		db.Statement.SetColumn("UpdatedAt", currentTime)
+		switch db.Statement.ReflectValue.Kind() {
+		case reflect.Slice, reflect.Array:
+			for i := 0; i < db.Statement.ReflectValue.Len(); i++ {
+				rv := reflect.Indirect(db.Statement.ReflectValue.Index(i))
+				field1 := db.Statement.Schema.FieldsByDBName["updated_at"]
+				field1.Set(rv, currentTime)
+				field := db.Statement.Schema.FieldsByDBName["created_at"]
+				field.Set(rv, currentTime)
+			}
+		case reflect.Struct:
+			db.Statement.SetColumn("created_at", currentTime)
+		}
 	}
 }
 

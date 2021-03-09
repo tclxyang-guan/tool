@@ -22,10 +22,6 @@ type Logger interface {
 	Errorf(format string, a ...interface{})
 }
 
-// MyLogger :
-type MyLogger struct {
-	logger *log.Logger
-}
 type MysqlConf struct {
 	Address         string `yaml:"address"`
 	DbName          string `yaml:"dbname"`
@@ -53,7 +49,7 @@ func EnableMysql(conf MysqlConf) (*gorm.DB, error) {
 	}
 	if conf.Prefix != "" {
 		gorm.DefaultTableNameHandler = func(db *gorm.DB, defaultTableName string) string {
-			return conf.Prefix + "_" + defaultTableName
+			return conf.Prefix + defaultTableName
 		}
 	}
 	tdb.SingularTable(true)
@@ -127,11 +123,4 @@ func addExtraSpaceIfExist(str string) string {
 		return " " + str
 	}
 	return ""
-}
-
-// Println :
-func (l MyLogger) Println(v ...interface{}) {
-	//l.logger.Infof(v...)
-	logStr := fmt.Sprintln(v)
-	l.logger.Panicln("%s", logStr)
 }

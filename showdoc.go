@@ -213,7 +213,7 @@ func DatamapGenerateReq(model interface{}) string {
 				break
 			}
 		}
-		if strings.HasPrefix(e.String(), "map") {
+		if e.Kind() != reflect.Struct {
 			continue
 		}
 		tbl := e.Name() + "\r\n\r\n"
@@ -296,7 +296,7 @@ func DatamapGenerateResp(model interface{}) string {
 				break
 			}
 		}
-		if strings.HasPrefix(e.String(), "map") {
+		if e.Kind() != reflect.Struct {
 			continue
 		}
 		tbl := e.Name() + "\r\n\r\n"
