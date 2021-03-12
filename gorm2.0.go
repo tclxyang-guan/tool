@@ -207,6 +207,7 @@ func updateTimeStampForCreateCallback2(db *gorm.DB) {
 			}
 		case reflect.Struct:
 			db.Statement.SetColumn("created_at", currentTime)
+			db.Statement.SetColumn("updated_at", currentTime)
 		}
 	}
 }
