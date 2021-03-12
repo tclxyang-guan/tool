@@ -262,7 +262,9 @@ func deleteCallback2(db *gorm.DB) {
 
 		if !db.DryRun && db.Error == nil {
 			//可通过输出Vars发现参数为2021-03-04 15:56:06.256这种带有尾缀的 因此重置
-			db.Statement.Vars[0] = time.Now().Format("2006-01-02 15:04:05")
+			if !db.Statement.Unscoped {
+				db.Statement.Vars[0] = time.Now().Format("2006-01-02 15:04:05")
+			}
 			result, err := db.Statement.ConnPool.ExecContext(db.Statement.Context, db.Statement.SQL.String(), db.Statement.Vars...)
 
 			if err == nil {
