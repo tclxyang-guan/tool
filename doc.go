@@ -288,9 +288,11 @@ func Recursive(str string, t int, d data, list1 *list.List, m map[string]bool) s
 				if d.Value.Kind() == reflect.Slice {
 					d1.Type = elem.Field(i).Type
 					d1.Value = reflect.ValueOf(nil)
+					comment += "(" + d1.Type.String() + ")"
 				} else {
 					d1.Type = d.Value.Field(i).Elem().Type()
 					d1.Value = d.Value.Field(i).Elem()
+					comment += "(" + d1.Type.String() + ")"
 				}
 				list1.PushBack(d1)
 			}
@@ -299,7 +301,7 @@ func Recursive(str string, t int, d data, list1 *list.List, m map[string]bool) s
 		if elem.Field(i).Type.Kind() == reflect.Struct || elem.Field(i).Type.Kind() == reflect.Ptr || elem.Field(i).Type.Kind() == reflect.Slice {
 			list1.PushBack(data{
 				Type:  elem.Field(i).Type,
-				Value: d.Value,
+				Value: d.Value.Field(i),
 			})
 			continue
 		}
