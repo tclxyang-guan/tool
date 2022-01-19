@@ -1,4 +1,4 @@
-module gitee.com/yanggit123/tool
+module github.com/guanyang-lab/tool
 
 go 1.15
 
