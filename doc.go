@@ -287,7 +287,11 @@ func Recursive(str string, t int, d data, list1 *list.List, m map[string]bool) s
 				d1 := data{}
 				if d.Value.Kind() == reflect.Slice {
 					d1.Type = elem.Field(i).Type
-					d1.Value = reflect.ValueOf(nil)
+					if d.Value.Len() > 0 {
+						d1.Value = d.Value.Index(0)
+					} else {
+						d1.Value = reflect.ValueOf(nil)
+					}
 					comment += "(" + d1.Type.String() + ")"
 				} else {
 					d1.Type = d.Value.Field(i).Elem().Type()
