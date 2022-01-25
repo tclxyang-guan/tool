@@ -292,13 +292,12 @@ func Recursive(str string, t int, d data, list1 *list.List, m map[string]bool) s
 					} else {
 						d1.Value = reflect.ValueOf(nil)
 					}
-					comment += "(" + d1.Type.String() + ")"
-				} else {
+					list1.PushBack(d1)
+				} else if !d.Value.Field(i).IsZero() {
 					d1.Type = d.Value.Field(i).Elem().Type()
 					d1.Value = d.Value.Field(i).Elem()
-					comment += "(" + d1.Type.String() + ")"
+					list1.PushBack(d1)
 				}
-				list1.PushBack(d1)
 			}
 		}
 		str += getStrJson(t, strings.ReplaceAll(json, ",omitempty", ""), require, elem.Field(i).Type.String(), comment)
